@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -ex
+
+ESP_HAL_CONFIG_PSRAM_MODE="octal" cargo "$@" --no-default-features --features="esp32s3,waveshare-esp32-s3-touch-lcd-5" --target-dir "./target/waveshare"

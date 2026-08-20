@@ -82,6 +82,15 @@ use framework::{
     jc8048w550c::{Jc8048w550c, Jc8048w550cDisplayPeripherals, Jc8048w550cFrameBuffers, Jc8048w550cRunner, Jc8048w550cSDCardPeripherals},
 };
 
+#[cfg(feature = "waveshare-esp32-s3-touch-lcd-5")]
+use framework::{
+    gt9x_adapter::Gt9xAdapterConfig,
+    waveshare_esp32_s3_touch_lcd_5::{
+        WaveshareEsp32S3TouchLcd5, WaveshareEsp32S3TouchLcd5DisplayPeripherals, WaveshareEsp32S3TouchLcd5FrameBuffers,
+        WaveshareEsp32S3TouchLcd5Runner, WaveshareEsp32S3TouchLcd5SDCardPeripherals,
+    },
+};
+
 use app_config::AppConfig;
 use settings::{AP_ADDR, MAX_NUM_PRINTERS};
 use settings::{API_SERVER_NUM_LISTENERS, WEB_SERVER_NUM_LISTENERS};
@@ -139,6 +148,10 @@ async fn main(spawner: Spawner) {
     // rgb-display rows set to 16, so required rouchly 60kb (bounce buffers + descriptors)
     #[cfg(feature = "jc8048w550c")]
     esp_alloc::heap_allocator!(size: 60 * 1024);
+
+    // Waveshare RGB bounce windows use 10 rows at 1024px RGB565, plus DMA descriptors.
+    #[cfg(feature = "waveshare-esp32-s3-touch-lcd-5")]
+    esp_alloc::heap_allocator!(size: 80 * 1024);
 
     spawner.spawn_heap(heap_stats_task()).ok();
 
@@ -371,6 +384,77 @@ async fn main(spawner: Spawner) {
         )
     };
 
+    #[cfg(feature = "waveshare-esp32-s3-touch-lcd-5")]
+    let (display, runner, sdcard_device) = {
+        const WAVESHARE_DISP_FRAME_BYTES: usize = 1024 * 600 * 2;
+        let frame_buffer_a: &'static mut [u8] = unsafe {
+            let layout = core::alloc::Layout::from_size_align(WAVESHARE_DISP_FRAME_BYTES, 128).expect("Invalid frame buffer layout");
+            let ptr = esp_alloc::HEAP.alloc_caps(esp_alloc::MemoryCapability::External.into(), layout);
+            if ptr.is_null() {
+                panic!("Failed to allocate external PSRAM frame buffer A");
+            }
+            core::slice::from_raw_parts_mut(ptr, WAVESHARE_DISP_FRAME_BYTES)
+        };
+        let frame_buffer_b: &'static mut [u8] = unsafe {
+            let layout = core::alloc::Layout::from_size_align(WAVESHARE_DISP_FRAME_BYTES, 128).expect("Invalid frame buffer layout");
+            let ptr = esp_alloc::HEAP.alloc_caps(esp_alloc::MemoryCapability::External.into(), layout);
+            if ptr.is_null() {
+                panic!("Failed to allocate external PSRAM frame buffer B");
+            }
+            core::slice::from_raw_parts_mut(ptr, WAVESHARE_DISP_FRAME_BYTES)
+        };
+
+        let display_peripherals = WaveshareEsp32S3TouchLcd5DisplayPeripherals {
+            LCD_CAM: peripherals.LCD_CAM,
+            DMA_CH_DPI: peripherals.DMA_CH2,
+            DMA_CH_M2M: peripherals.DMA_CH0,
+            SPI_M2M: peripherals.SPI2,
+            I2Cx: peripherals.I2C0,
+
+            GPIO0: peripherals.GPIO0,
+            GPIO1: peripherals.GPIO1,
+            GPIO2: peripherals.GPIO2,
+            GPIO3: peripherals.GPIO3,
+            GPIO4: peripherals.GPIO4,
+            GPIO5: peripherals.GPIO5,
+            GPIO7: peripherals.GPIO7,
+            GPIO8: peripherals.GPIO8,
+            GPIO9: peripherals.GPIO9,
+            GPIO10: peripherals.GPIO10,
+            GPIO14: peripherals.GPIO14,
+            GPIO17: peripherals.GPIO17,
+            GPIO18: peripherals.GPIO18,
+            GPIO21: peripherals.GPIO21,
+            GPIO38: peripherals.GPIO38,
+            GPIO39: peripherals.GPIO39,
+            GPIO40: peripherals.GPIO40,
+            GPIO41: peripherals.GPIO41,
+            GPIO42: peripherals.GPIO42,
+            GPIO45: peripherals.GPIO45,
+            GPIO46: peripherals.GPIO46,
+            GPIO47: peripherals.GPIO47,
+            GPIO48: peripherals.GPIO48,
+        };
+
+        let sdcard_peripherals = WaveshareEsp32S3TouchLcd5SDCardPeripherals {
+            GPIO15: peripherals.GPIO15,
+            GPIO11: peripherals.GPIO11,
+            GPIO12: peripherals.GPIO12,
+            GPIO13: peripherals.GPIO13,
+            SPIx: peripherals.SPI3,
+            DMA_CHx: peripherals.DMA_CH1,
+        };
+
+        let touch_config = Gt9xAdapterConfig::default();
+        WaveshareEsp32S3TouchLcd5::new(
+            display_peripherals,
+            sdcard_peripherals,
+            WaveshareEsp32S3TouchLcd5FrameBuffers::Double(frame_buffer_a, frame_buffer_b),
+            touch_config,
+            framework.clone(),
+        )
+    };
+
     spawner.spawn(display_runner(runner)).ok();
     let _ = display.wait_init_done().await; // important to wait for init stage to complete before moving on
 
@@ -499,6 +583,9 @@ async fn main(spawner: Spawner) {
     };
 
     #[cfg(feature = "jc8048w550c")]
+    let (pn532_spi_device, pn532_irq) = (None, None);
+
+    #[cfg(feature = "waveshare-esp32-s3-touch-lcd-5")]
     let (pn532_spi_device, pn532_irq) = (None, None);
 
     let (local_hx711_sck, local_hx711_dt): (Option<esp_hal::gpio::AnyPin<'static>>, Option<esp_hal::gpio::AnyPin<'static>>) =
@@ -659,6 +746,19 @@ pub async fn display_runner(mut runner: WT32SC01PlusRunner<esp_hal::peripherals:
 #[embassy_executor::task]
 pub async fn display_runner(
     mut runner: Jc8048w550cRunner<
+        esp_hal::peripherals::DMA_CH2<'static>,
+        esp_hal::peripherals::DMA_CH0<'static>,
+        esp_hal::peripherals::SPI2<'static>,
+        esp_hal::peripherals::I2C0<'static>,
+    >,
+) {
+    runner.run().await;
+}
+
+#[cfg(feature = "waveshare-esp32-s3-touch-lcd-5")]
+#[embassy_executor::task]
+pub async fn display_runner(
+    mut runner: WaveshareEsp32S3TouchLcd5Runner<
         esp_hal::peripherals::DMA_CH2<'static>,
         esp_hal::peripherals::DMA_CH0<'static>,
         esp_hal::peripherals::SPI2<'static>,

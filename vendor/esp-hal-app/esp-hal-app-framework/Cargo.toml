@@ -134,6 +134,7 @@ hmac = { version = "0.12.1", default-features = false}
 default = ["esp32s3", "extern-random", "improv-jtag-serial"]
 wt32-sc01-plus=[]
 jc8048w550c=["esp-hal/psram", "dep:gt9x"]
+waveshare-esp32-s3-touch-lcd-5=["esp-hal/psram", "dep:gt9x"]
 extern-random=[]
 improv-uart=[]
 improv-jtag-serial=[]

@@ -167,6 +167,7 @@ default = ["esp32s3", "wt32-sc01-plus"]
 
 wt32-sc01-plus=["framework/wt32-sc01-plus"]
 jc8048w550c=["framework/jc8048w550c"]
+waveshare-esp32-s3-touch-lcd-5=["framework/waveshare-esp32-s3-touch-lcd-5"]
 
 rgb-stats =["framework/rgb-stats"]
 log_none =["framework/log_none"]

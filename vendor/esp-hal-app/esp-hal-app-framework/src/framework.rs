@@ -180,7 +180,7 @@ pub struct Framework {
     pub ota_state: Option<OtaState>,
     display_window: Option<Rc<McuWindow>>,
 
-    #[cfg(any(feature = "wt32-sc01-plus", feature = "jc8048w550c"))]
+    #[cfg(any(feature = "wt32-sc01-plus", feature = "jc8048w550c", feature = "waveshare-esp32-s3-touch-lcd-5"))]
     #[allow(clippy::type_complexity)]
     inner_file_store: Option<
         Rc<
@@ -248,7 +248,7 @@ impl Framework {
             settings,
             ota_state: None,
             display_window: None,
-            #[cfg(any(feature = "wt32-sc01-plus", feature = "jc8048w550c"))]
+            #[cfg(any(feature = "wt32-sc01-plus", feature = "jc8048w550c", feature = "waveshare-esp32-s3-touch-lcd-5"))]
             inner_file_store: None,
         };
         let framework = Rc::new(RefCell::new(framework));
@@ -424,7 +424,7 @@ impl Framework {
         Ok(())
     }
 
-    #[cfg(any(feature = "wt32-sc01-plus", feature = "jc8048w550c"))]
+    #[cfg(any(feature = "wt32-sc01-plus", feature = "jc8048w550c", feature = "waveshare-esp32-s3-touch-lcd-5"))]
     pub async fn set_sdcard_device(
         framework: Rc<RefCell<Framework>>,
         // Non DMA Version
@@ -451,7 +451,7 @@ impl Framework {
         framework.borrow_mut().inner_file_store = Some(file_store);
     }
 
-    #[cfg(any(feature = "wt32-sc01-plus", feature = "jc8048w550c"))]
+    #[cfg(any(feature = "wt32-sc01-plus", feature = "jc8048w550c", feature = "waveshare-esp32-s3-touch-lcd-5"))]
     #[allow(clippy::type_complexity)]
     pub fn file_store(
         &self,
@@ -570,7 +570,7 @@ impl Framework {
     }
 
     pub fn reset_device_safer(&self, timeout: Option<Duration>) {
-        #[cfg(any(feature = "wt32-sc01-plus", feature = "jc8048w550c"))]
+        #[cfg(any(feature = "wt32-sc01-plus", feature = "jc8048w550c", feature = "waveshare-esp32-s3-touch-lcd-5"))]
         {
             let framework = self.framework.as_ref().unwrap().clone();
             self.spawner
@@ -580,7 +580,7 @@ impl Framework {
                 .ok();
         }
 
-        #[cfg(not(any(feature = "wt32-sc01-plus", feature = "jc8048w550c")))]
+        #[cfg(not(any(feature = "wt32-sc01-plus", feature = "jc8048w550c", feature = "waveshare-esp32-s3-touch-lcd-5")))]
         {
             let _ = timeout;
             self.reset_device_immediate();
@@ -588,7 +588,7 @@ impl Framework {
     }
 
     pub async fn reset_device_safer_async(framework: Rc<RefCell<Self>>, timeout: Option<Duration>) {
-        #[cfg(any(feature = "wt32-sc01-plus", feature = "jc8048w550c"))]
+        #[cfg(any(feature = "wt32-sc01-plus", feature = "jc8048w550c", feature = "waveshare-esp32-s3-touch-lcd-5"))]
         {
             let file_store = framework.borrow().inner_file_store.clone();
             if let Some(file_store) = file_store {
@@ -607,7 +607,7 @@ impl Framework {
             }
         }
 
-        #[cfg(not(any(feature = "wt32-sc01-plus", feature = "jc8048w550c")))]
+        #[cfg(not(any(feature = "wt32-sc01-plus", feature = "jc8048w550c", feature = "waveshare-esp32-s3-touch-lcd-5")))]
         {
             let _ = (framework, timeout);
             esp_hal::system::software_reset();

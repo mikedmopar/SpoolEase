@@ -5,8 +5,14 @@
 #![feature(impl_trait_in_assoc_type)]
 #![no_main]
 #![feature(associated_type_defaults)]
-#![cfg_attr(feature = "jc8048w550c", feature(generic_const_exprs))]
-#![cfg_attr(feature = "jc8048w550c", allow(incomplete_features))]
+#![cfg_attr(
+    any(feature = "jc8048w550c", feature = "waveshare-esp32-s3-touch-lcd-5"),
+    feature(generic_const_exprs)
+)]
+#![cfg_attr(
+    any(feature = "jc8048w550c", feature = "waveshare-esp32-s3-touch-lcd-5"),
+    allow(incomplete_features)
+)]
 
 #[macro_use]
 pub mod log_ext;
@@ -14,12 +20,16 @@ pub mod log_ext;
 pub mod terminal;
 
 pub mod backlight;
+#[cfg(feature = "waveshare-esp32-s3-touch-lcd-5")]
+pub mod ch422g;
 pub mod display_snapshot;
 pub mod flash_map;
 pub mod framework;
 #[cfg(feature = "jc8048w550c")]
 pub mod jc8048w550c;
 pub mod ui_loop;
+#[cfg(feature = "waveshare-esp32-s3-touch-lcd-5")]
+pub mod waveshare_esp32_s3_touch_lcd_5;
 #[cfg(feature = "wt32-sc01-plus")]
 pub mod wt32_sc01_plus;
 
@@ -30,10 +40,10 @@ pub mod license;
 // pub mod sdcard;
 #[cfg(feature = "wt32-sc01-plus")]
 pub mod ft6x36_adapter;
-#[cfg(feature = "jc8048w550c")]
+#[cfg(any(feature = "jc8048w550c", feature = "waveshare-esp32-s3-touch-lcd-5"))]
 pub mod gt9x_adapter;
 pub mod ota;
-#[cfg(feature = "jc8048w550c")]
+#[cfg(any(feature = "jc8048w550c", feature = "waveshare-esp32-s3-touch-lcd-5"))]
 #[path = "rgb-display.rs"]
 pub mod rgb_display;
 pub mod sdcard_spi;
@@ -50,7 +60,11 @@ pub mod settings;
 
 extern crate alloc;
 
-#[cfg(all(feature = "wt32-sc01-plus", feature = "jc8048w550c"))]
+#[cfg(any(
+    all(feature = "wt32-sc01-plus", feature = "jc8048w550c"),
+    all(feature = "wt32-sc01-plus", feature = "waveshare-esp32-s3-touch-lcd-5"),
+    all(feature = "jc8048w550c", feature = "waveshare-esp32-s3-touch-lcd-5"),
+))]
 compile_error!("Only one board feature can be enabled at a time");
 
 #[cfg(any(

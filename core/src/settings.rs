@@ -37,6 +37,11 @@ pub const DISPLAY_WIDTH_PX: u32 = 800;
 #[cfg(feature = "jc8048w550c")]
 pub const DISPLAY_HEIGHT_PX: u32 = 480;
 
+#[cfg(feature = "waveshare-esp32-s3-touch-lcd-5")]
+pub const DISPLAY_WIDTH_PX: u32 = 1024;
+#[cfg(feature = "waveshare-esp32-s3-touch-lcd-5")]
+pub const DISPLAY_HEIGHT_PX: u32 = 600;
+
 #[cfg(feature = "wt32-sc01-plus")]
 pub const DISPLAY_WIDTH_PX: u32 = 480;
 #[cfg(feature = "wt32-sc01-plus")]
