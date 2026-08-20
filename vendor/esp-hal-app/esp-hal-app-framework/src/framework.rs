@@ -20,8 +20,7 @@ use embassy_sync::{
 use embassy_time::{Duration, Timer};
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use esp_hal::{
-    gpio::{AnyPin, Input, InputConfig, Output, Pull},
-    spi::master::Spi,
+    gpio::{AnyPin, Input, InputConfig, Pull},
 };
 use esp_mbedtls::TlsReference;
 use esp_storage::FlashStorage;
@@ -36,13 +35,25 @@ use crate::{
     slint_ext::{McuWindow, SnapshotError},
     utils::SpawnerHeapExt,
 };
+#[cfg(feature = "waveshare-esp32-s3-touch-lcd-5")]
+use crate::ch422g::WaveshareSdCardCs;
 use crate::{
     mdns::mdns_task, ntp::ntp_task, ota::OtaRequest, sdcard_store::SDCardStore,
     web_server::WebServerCommand,
 };
 
+#[cfg(feature = "waveshare-esp32-s3-touch-lcd-5")]
+type SdCardCs = WaveshareSdCardCs;
+
+#[cfg(not(feature = "waveshare-esp32-s3-touch-lcd-5"))]
+type SdCardCs = esp_hal::gpio::Output<'static>;
+
 pub type SDCardStoreType = SDCardStore<
-    ExclusiveDevice<Spi<'static, esp_hal::Async>, Output<'static>, NoDelay>,
+    ExclusiveDevice<
+        esp_hal::spi::master::SpiDmaBus<'static, esp_hal::Async>,
+        SdCardCs,
+        NoDelay,
+    >,
     FILE_STORE_MAX_DIRS,
     FILE_STORE_MAX_FILES,
 >;
@@ -193,7 +204,7 @@ pub struct Framework {
                     // DMA:
                     ExclusiveDevice<
                         esp_hal::spi::master::SpiDmaBus<'static, esp_hal::Async>,
-                        Output<'static>,
+                        SdCardCs,
                         NoDelay,
                     >,
                     20,
@@ -438,7 +449,7 @@ impl Framework {
         // DMA Version
         sdcard_device: ExclusiveDevice<
             esp_hal::spi::master::SpiDmaBus<'static, esp_hal::Async>,
-            esp_hal::gpio::Output<'static>,
+            SdCardCs,
             embedded_hal_bus::spi::NoDelay,
         >,
     ) {
@@ -465,7 +476,7 @@ impl Framework {
                 // DMA version
                 ExclusiveDevice<
                     esp_hal::spi::master::SpiDmaBus<'static, esp_hal::Async>,
-                    Output<'static>,
+                    SdCardCs,
                     NoDelay,
                 >,
                 20,

@@ -20,7 +20,7 @@ use esp_hal::{
 
 use crate::{
     backlight::BacklightDevice,
-    ch422g::Ch422g,
+    ch422g::{Ch422g, WaveshareSdCardCs},
     framework::Framework,
     gt9x_adapter::{Gt9xAdapter, Gt9xAdapterConfig, Jc8048w550cGt911},
     mk_static,
@@ -279,7 +279,6 @@ where
     S: esp_hal::spi::master::Instance + 'static,
     CHSD: esp_hal::dma::DmaChannelFor<spi::master::AnySpi<'static>>,
 {
-    pub GPIO15: esp_hal::peripherals::GPIO15<'static>,
     pub GPIO11: esp_hal::peripherals::GPIO11<'static>,
     pub GPIO12: esp_hal::peripherals::GPIO12<'static>,
     pub GPIO13: esp_hal::peripherals::GPIO13<'static>,
@@ -311,7 +310,7 @@ impl WaveshareEsp32S3TouchLcd5 {
         WaveshareEsp32S3TouchLcd5Runner<CHLCD, CHM2M, SPIM2M, P>,
         ExclusiveDevice<
             esp_hal::spi::master::SpiDmaBus<'static, esp_hal::Async>,
-            esp_hal::gpio::Output<'a>,
+            WaveshareSdCardCs,
             embedded_hal_bus::spi::NoDelay,
         >,
     )
@@ -333,11 +332,6 @@ impl WaveshareEsp32S3TouchLcd5 {
         };
         let me = Self { init_done };
 
-        let sd_cs = Output::new(
-            sdcard_peripherals.GPIO15,
-            Level::High,
-            OutputConfig::default(),
-        );
         let sd_sclk = sdcard_peripherals.GPIO12;
         let sd_miso = sdcard_peripherals.GPIO13;
         let sd_mosi = sdcard_peripherals.GPIO11;
@@ -345,7 +339,7 @@ impl WaveshareEsp32S3TouchLcd5 {
         let sdcard_spi_device = create_sdcard_spi_device_dma(
             sdcard_peripherals.SPIx,
             sdcard_peripherals.DMA_CHx,
-            sd_cs,
+            WaveshareSdCardCs,
             sd_sclk,
             sd_miso,
             sd_mosi,
@@ -560,6 +554,10 @@ where
             .enable_backlight_state()
             .await
             .expect("Failed to enable Waveshare backlight through CH422G");
+        ch422g
+            .select_sd_card_state()
+            .await
+            .expect("Failed to select Waveshare SD card through CH422G");
         drop(touch_int_strap);
 
         let touch_i2c = ch422g.release();

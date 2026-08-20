@@ -1,33 +1,29 @@
 use embedded_hal_bus::spi::ExclusiveDevice;
-use esp_hal::{
-    dma::DmaTxBuf,
-    gpio::Output,
-    spi::{self, master::Spi},
-    time::Rate,
-};
+use esp_hal::{dma::DmaTxBuf, spi::{self, master::Spi}, time::Rate};
 
 // ===============================================================================================================
 // == Shared SDCard SPI Device Setup =============================================================================
 // ===============================================================================================================
 
 #[allow(clippy::too_many_arguments)]
-pub fn create_sdcard_spi_device_dma<'a, S, CHSD, SCLK, MISO, MOSI>(
+pub fn create_sdcard_spi_device_dma<'a, S, CHSD, CS, SCLK, MISO, MOSI>(
     spix: S,
     dma_ch: CHSD,
-    sd_cs: Output<'a>,
+    sd_cs: CS,
     sd_sclk: SCLK,
     sd_miso: MISO,
     sd_mosi: MOSI,
     frequency: Rate,
 ) -> ExclusiveDevice<
     esp_hal::spi::master::SpiDmaBus<'a, esp_hal::Async>,
-    esp_hal::gpio::Output<'a>,
+    CS,
     embedded_hal_bus::spi::NoDelay,
 >
 where
     'a: 'static,
     S: esp_hal::spi::master::Instance + 'static,
     CHSD: esp_hal::dma::DmaChannelFor<spi::master::AnySpi<'static>> + 'a,
+    CS: embedded_hal::digital::OutputPin,
     SCLK: esp_hal::gpio::OutputPin + 'static,
     MISO: esp_hal::gpio::InputPin + 'static,
     MOSI: esp_hal::gpio::OutputPin + 'static,

@@ -15,7 +15,9 @@ use alloc::{
 };
 // use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 use framework::{
-    debug, error, info,
+    debug, error,
+    framework::SDCardStoreType,
+    info,
     ntp::InstantExt,
     prelude::*,
     settings::{FILE_STORE_MAX_DIRS, FILE_STORE_MAX_FILES},
@@ -109,21 +111,18 @@ pub enum StoreError {
 //     }
 // }
 
-// Non DMA version
+type TheSpi = <SDCardStoreType as SDCardStoreSpi>::Spi;
 
-// type TheSpi = embedded_hal_bus::spi::ExclusiveDevice<
-//     esp_hal::spi::master::Spi<'static, esp_hal::Async>,
-//     esp_hal::gpio::Output<'static>,
-//     embedded_hal_bus::spi::NoDelay,
-// >;
+trait SDCardStoreSpi {
+    type Spi;
+}
 
-// DMA vers>n
-
-type TheSpi = embedded_hal_bus::spi::ExclusiveDevice<
-    esp_hal::spi::master::SpiDmaBus<'static, esp_hal::Async>,
-    esp_hal::gpio::Output<'static>,
-    embedded_hal_bus::spi::NoDelay,
->;
+impl<SPI, const MAX_DIRS: usize, const MAX_FILES: usize> SDCardStoreSpi for SDCardStore<SPI, MAX_DIRS, MAX_FILES>
+where
+    SPI: embedded_hal_async::spi::SpiDevice,
+{
+    type Spi = SPI;
+}
 
 #[allow(private_interfaces)]
 pub struct Store {

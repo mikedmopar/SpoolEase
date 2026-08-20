@@ -437,7 +437,6 @@ async fn main(spawner: Spawner) {
         };
 
         let sdcard_peripherals = WaveshareEsp32S3TouchLcd5SDCardPeripherals {
-            GPIO15: peripherals.GPIO15,
             GPIO11: peripherals.GPIO11,
             GPIO12: peripherals.GPIO12,
             GPIO13: peripherals.GPIO13,
