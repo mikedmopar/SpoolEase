@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SpoolEase Scale Configuration</title>
+    <style>
+      /* General Styles */
+      body {
+        display: none;
+        font-family: Arial, sans-serif;
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      h3 {
+        font-weight: normal;
+      }
+
+      /* Section Styles */
+      .section {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      .section-title {
+        margin-top: 0;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+        color: #333;
+      }
+
+      /* Form Styles */
+      .form-row {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #555;
+      }
+      label span {
+        font-weight: normal;
+      }
+
+      .feedback-label {
+        display: block;
+        text-align: center;
+        margin: 10px auto 0;
+      }
+
+      .status-text {
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+        margin: 0;
+        min-height: 2rem;
+        height: 2rem;
+        display: flex;
+        align-items: center;
+      }
+
+      .next-to-status-button {
+        height: 2rem; 
+        margin: 0; 
+        margin-left: 10px; 
+        padding: 0 10px;
+      }
+
+      input[type="text"],
+      input[type="password"],
+      input[type="number"] {
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      input[type="number"] {
+        width: 150px;
+      }
+
+      .password-container {
+        position: relative;
+      }
+
+      .toggle-password {
+        position: absolute;
+        right: 10px;
+        top: 5px;
+        cursor: pointer;
+        color: #666;
+      }
+
+      /* Button Styles */
+
+      .button-container {
+        margin: 20px 0;
+        display: flex;
+        gap: 5px;
+      }
+
+      button {
+        padding: 10px 15px;
+        margin-right: 10px;
+        margin-top: 5px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      button:hover {
+        background-color: #45a049;
+      }
+
+      button.secondary {
+        background-color: #2196f3;
+      }
+
+      button.secondary:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+
+      button.secondary:hover {
+        background-color: #0b7dda;
+      }
+
+      button.danger {
+        background-color: #f44336;
+      }
+
+      button.danger:not(:disabled):hover {
+        background-color: #d32f2f;
+      }
+
+      button.apply-btn {
+        width: 100%;
+      }
+
+      button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+
+      button.add-btn {
+        background-color: #2196f3;
+        margin-bottom: 5px;
+      }
+
+      .error-message {
+        color: red;
+        font-size: 12px;
+        margin-top: 2px;
+        display: none;
+      }
+
+      #custom-alert {
+          position: fixed;
+          top: 0; left: 0; width: 100%; height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;  /* Ensure this overlay is on top of all content */
+      }
+
+      #custom-alert-box {
+          background: white;
+          padding: 20px;
+          border-radius: 5px;
+          text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="custom-alert" style="display: none;">
+        <div id="custom-alert-box">
+            <p id="custom-alert-text"></p>
+            <button onclick="closeAlert()">OK</button>
+        </div>
+    </div>
+    <script>
+        function showAlert(message) {
+            document.getElementById("custom-alert-text").innerText = message;
+            document.getElementById("custom-alert").style.display = "flex";
+        }
+
+        function closeAlert() {
+            document.getElementById("custom-alert").style.display = "none";
+        }
+        window.alert = function(message) { showAlert(message); };
+    </script>
+
+    <h1>SpoolEase-Scale</h1>
+    <h3>Most configurations require device restart</h3>
+
+    <!-- Security Key Section -->
+    <div class="section" id="security-section">
+      <h2 class="section-title">Security Key</h2>
+
+      <div id="verify-key-section">
+        <div class="form-row">
+          <label for="security-key"
+            >Key: * <span>Fill and verify key before configuring</span></label
+          >
+          <input
+            type="text"
+            id="security-key"
+            placeholder="Enter security key"
+          />
+        </div>
+
+        <button
+          id="verify-key-button"
+          type="button"
+          class="secondary apply-btn"
+          onclick="applyKeyFetchConfigs()"
+          disabled
+        >
+          Verify Key & Load Config
+        </button>
+        <label class="feedback-label" id="security-key-feedback"></label>
+      </div>
+      <div id="set-fixed-key-section">
+        <div class="form-row" style="margin-top: 20px">
+          <label for="fixed-security-key"
+            >Set a Fixed Key:<span
+              >Optional, applies after restart</span
+            ></label
+          >
+          <input
+            type="text"
+            id="fixed-security-key"
+            placeholder="Enter fixed security key"
+          />
+        </div>
+
+        <button
+          id="set-fixed-key-apply"
+          type="button"
+          class="apply-btn"
+          onclick="applyFixedSecurityKeySettings()"
+          disabled
+        >
+          Apply
+        </button>
+      </div>
+    </div>
+
+    <!-- WiFi Credentials Section -->
+    <div class="section" id="wifi-section">
+      <h2 class="section-title">WiFi Credentials</h2>
+
+      <div class="form-row">
+        <label for="wifi-ssid">SSID: *</label>
+        <input
+          type="text"
+          id="wifi-ssid"
+          placeholder="Enter WiFi network name"
+        />
+      </div>
+
+      <div class="form-row">
+        <label for="wifi-password">Password: *</label>
+        <div class="password-container">
+          <input
+            type="password"
+            id="wifi-password"
+            placeholder="Enter WiFi password"
+          />
+          <span
+            class="toggle-password"
+            onclick="togglePasswordVisibility('wifi-password', this)"
+            >👁️</span
+          >
+        </div>
+      </div>
+
+      <button
+        id="wifi-section-apply"
+        type="button"
+        class="apply-btn"
+        onclick="applyWiFiSettings()"
+        disabled
+      >
+        Apply
+      </button>
+    </div>
+
+    <!-- Device Name -->
+    <div class="section" id="device-name-section">
+      <h2 class="section-title">Device Name</h2>
+      <div class="form-row">
+        <label for="device-name">Device Name:<span>mDNS (http://devicename.local) & discovery</span></label>
+        <input
+          type="text"
+          maxlength="63"
+          pattern="[a-zA-Z0-9-]{1,63}"
+          oninput="filterDnsName(this)"
+          id="device-name"
+          placeholder="Enter Device Name"
+        />
+      </div>
+
+      <button
+        id="device-name-apply"
+        type="button"
+        class="apply-btn"
+        onclick="applyDeviceNameSettings()"
+        disabled
+      >
+        Apply
+      </button>
+    </div>
+
+    <!-- OTA Section -->
+
+    <div class="section" id="ota-section">
+      <h2 class="section-title">Network Firmware Upgrade</h2>
+
+      <div class="form-row">
+        <label for="curr-version">Current firmware version:</label>
+        <p class="status-text" id="curr-version"></p>
+      </div>
+
+      <button
+        id="ota-request"
+        type="button"
+        class="danger apply-btn"
+        onclick="requestOta()"
+        disabled
+        style="margin-bottom: 10px"
+      >
+        Start Network Upgrade
+      </button>
+
+      <div class="form-row">
+        <label for="ota-status">Status:</label>
+        <div style="display: flex; flex-direction: row;align-items: center;">
+          <p style="height: 3rem" class="status-text" id="ota-status"></p>
+          <button
+             style="height: 3rem"
+            class="next-to-status-button "
+            id="ota-status-update"
+            type="button"
+            onclick="fetchOtaStatus()"
+            disabled
+          >
+            Update<br/>Status
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- General Section -->
+    <div class="section" id="general-section">
+      <h2 class="section-title">General</h2>
+
+      <button
+        id="restart-device"
+        type="button"
+        class="danger apply-btn"
+        onclick="restartDevice()"
+        disabled
+      >
+        Restart Device
+      </button>
+    </div>
+
+
+    <!-- Wasm Section -->
+    <script type="module">
+      // Importing WASM as a JS module requires us to call an init function provided by the default export.
+      // This is planned to be changed in the future.
+      import {
+        default as wasm,
+        derive_key,
+        encrypt,
+        decrypt,
+      } from "./pkg/device_wasm.js";
+      // initialize wasm
+      console.log("Waiting for wasm initialization");
+      await wasm();
+      console.log("Wasm initialization completed");
+      window.securityKeyOnDerive = "";
+      window.encryptionKey = derive_key("", "example_salt");
+      window.derive_key = derive_key;
+      window.decrypt = decrypt;
+      window.encrypt = encrypt;
+      document.body.style.display = "block";
+
+      const secKeyOnUrl = getHashParam('sk');
+      if (secKeyOnUrl) {
+        document.getElementById("security-key").value = secKeyOnUrl;
+        applyKeyFetchConfigs();
+      }
+    </script>
+
+    <!-- Common Communication & UI Functions -->
+    <script>
+      async function sendData(inurl, data, retries = 5) {
+        // data is object, not json string
+        const url = `${urlPrefix}${inurl}`;
+        let encryptionKey = getEncryptionKey();
+        const response = await retryOperation(() =>
+          fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/text" },
+            body: encrypt(encryptionKey, JSON.stringify(data)),
+          }), retries
+        );
+        return response;
+      }
+
+      // Utility function to collect form data and send to the server
+      async function sendConfigData(url, data, applyButton) {
+        try {
+          let response = await sendData(`${url}`, data);
+          if (!response.ok) throw new Error(`Error: ${response.statusText}`);
+          const encryptedText = await response.text();
+          const decryptedText = decrypt(encryptionKey, encryptedText);
+          const result = JSON.parse(decryptedText);
+          alert(`Settings applied successfully`);
+          if (applyButton) {
+            applyButton.disabled = true;
+          }
+        } catch (error) {
+          console.error("Failed to apply settings:", error);
+          alert(`Failed to apply settings: ${error.message}`);
+        }
+      }
+
+      function getEncryptionKey() {
+        const securityKey = document
+          .getElementById("security-key")
+          .value.trim();
+        if (securityKey != window.securityKeyOnDerive) {
+          window.encryptionKey = derive_key(securityKey, "example_salt");
+          window.securityKeyOnDerive = securityKey;
+        }
+        return window.encryptionKey;
+      }
+
+      async function retryOperation(operation, retries = 5) {
+        for (let i = 0; i < retries; i++) {
+          try {
+            return await operation();
+          } catch (error) {
+            console.log(error);
+            if (i === retries - 1) throw error; // Throw error if it's the last retry
+          }
+        }
+      }
+
+      async function fetchSectionConfigs() {
+        await retryOperation(() => fetchWifiInitialConfig());
+        await retryOperation(() => fetchOtaStatus());
+        await retryOperation(() => fetchDeviceNameInitialConfig());
+      }
+
+      async function fetchInitialSectionConfig(section) {
+        try {
+          const response = await fetch(`${urlPrefix}/api/${section}-config`); // Replace with actual endpoint
+          if (!response.ok) throw new Error(`Error: ${response.statusText}`);
+          const encryptedText = await response.text();
+          const decryptedText = decrypt(encryptionKey, encryptedText);
+          const data = JSON.parse(decryptedText);
+
+          return data;
+        } catch (error) {
+          console.error(`Failed to fetch ${section} configuration:`, error);
+          return null;
+        }
+      }
+
+      function getHashParam(key) {
+        const params = new URLSearchParams(location.hash.slice(1));
+        return params.get(key) ?? null;
+      }
+
+      function setupChangeListeners(sectionId, buttonId, feedbackLabelId) {
+        const section = document.getElementById(sectionId);
+        const applyButton = document.getElementById(buttonId);
+        section.addEventListener("input", () => {
+          applyButton.disabled = false;
+          if (feedbackLabelId) {
+            const feedbackLabel = document.getElementById(feedbackLabelId);
+            feedbackLabel.textContent = "";
+          }
+        });
+      }
+    </script>
+
+    <!-- Basic functionality relevant to any device (wifi, security key, restart device)-->
+    <script>
+      // Function to test key
+      async function applyKeyFetchConfigs() {
+        const data = { test: "Hello" };
+        try {
+          let response = await sendData("/api/test-key", data); // Replace with actual server endpoint
+          document.getElementById("wifi-section-apply").disabled = true;
+          document.getElementById("device-name-apply").disabled = true;
+          document.getElementById("set-fixed-key-apply").disabled = true;
+          if (response.status == 400) {
+            document.getElementById("security-key-feedback").textContent = "Security Key is incorrect";
+
+            document.getElementById("ota-request").disabled = true;
+            document.getElementById("ota-status-update").disabled = true;
+            document.getElementById("restart-device").disabled = true;
+
+            return;
+          } else if (response.ok) {
+            document.getElementById("verify-key-button").disabled = true;
+            document.getElementById("security-key-feedback").textContent = "Security Key validated";
+
+            document.getElementById("ota-request").disabled = false;
+            document.getElementById("ota-status-update").disabled = false;
+            document.getElementById("restart-device").disabled = false;
+          }
+        } catch (error) {
+          console.error("Failed to apply settings:", error);
+          document.getElementById("security-key-feedback").textContent =
+            `Failed to check key, try again (${error.message})`;
+          return;
+        }
+        try {
+          await fetchSectionConfigs();
+        } catch (error) {
+          document.getElementById("security-key-feedback").textContent +=
+            " but Failed to Load Configs";
+        }
+      }
+
+      async function fetchWifiInitialConfig() {
+        const data = await fetchInitialSectionConfig("wifi");
+
+        if (data) {
+          document.getElementById("wifi-ssid").value = data.ssid;
+          document.getElementById("wifi-password").value = data.password;
+        }
+      }
+
+      async function fetchOtaStatus() {
+        const data = await fetchInitialSectionConfig("ota");
+
+        if (data) {
+          document.getElementById("ota-status").textContent = data.status;
+          document.getElementById("curr-version").textContent = data.curr_ver;
+        }
+      }
+
+      function requestOta() {
+        if (confirm("Do you want to upgrade firmware now?")) {
+          const data = { request: "Update" };
+          sendData("/api/ota-request", data, 1);
+          alert(
+            "Request to start network upgrade sent, press [Updat Status] to see progress",
+          );
+        }
+      }
+
+      async function fetchDeviceNameInitialConfig() {
+        const data = await fetchInitialSectionConfig("device-name");
+
+        if (data) {
+          document.getElementById("device-name").value = data.name;
+        }
+      }
+
+      // Function to reset the device
+      function restartDevice() {
+        const data = {};
+        sendData("/api/reset-device", data, 1);
+        alert(
+          "Device restarted. Reactivate Web Config from device and refresh page to continue configuration",
+        );
+      }
+
+      // Function to collect WiFi settings and send them as JSON
+      function applyWiFiSettings() {
+        const ssid = document.getElementById("wifi-ssid").value;
+        const password = document.getElementById("wifi-password").value;
+        const data = { ssid, password };
+        const applyButton = document.getElementById("wifi-section-apply");
+        sendConfigData("/api/wifi-config", data, applyButton); // Replace with actual server endpoint
+      }
+
+      function applyDeviceNameSettings() {
+        const name = document.getElementById("device-name").value;
+        const data = { name };
+        const applyButton = document.getElementById("device-name-apply");
+        sendConfigData("/api/device-name-config", data, applyButton); // Replace with actual server endpoint
+      }
+
+      function filterDnsName(el) {
+        el.value = el.value
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '')   // remove invalid chars
+          .replace(/^-+/, '');          // trim leading hyphens (trailing also not allowed, but during typing it is there)
+      }
+
+      function applyFixedSecurityKeySettings() {
+        const key = document.getElementById("fixed-security-key").value;
+        const data = { key };
+        const applyButton = document.getElementById("set-fixed-key-apply");
+        sendConfigData("/api/fixed-key-config", data, applyButton); // Replace with actual server endpoint
+      }
+    
+      // ==========================================
+      // Initialization
+      // ==========================================
+      document.addEventListener("DOMContentLoaded", function () {
+        // Initialize the form with data from server
+
+        setupChangeListeners("wifi-section", "wifi-section-apply");
+        setupChangeListeners(
+          "verify-key-section",
+          "verify-key-button",
+          "security-key-feedback",
+        );
+        setupChangeListeners("set-fixed-key-section", "set-fixed-key-apply");
+        setupChangeListeners("device-name-section", "device-name-apply");
+        // setupChangeListeners("display-section", "display-section-apply");
+      });
+
+      function togglePasswordVisibility(inputId, toggleButton) {
+        const passwordInput = document.getElementById(inputId);
+
+        if (passwordInput.type === "password") {
+          passwordInput.type = "text";
+          toggleButton.textContent = "🔒";
+        } else {
+          passwordInput.type = "password";
+          toggleButton.textContent = "👁️";
+        }
+      }
+    </script>
+      
+    </script>
+
+    <!-- for debugging -->
+    <script>
+      var urlPrefix = "";
+      // for local debugging case
+      if (window.location.href.includes("captive")) {
+        urlPrefix = "/captive";
+      }
+      window.addEventListener("DOMContentLoaded", () => {
+        if (
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1"
+        ) {
+          urlPrefix = "http://192.168.10.79" + `${urlPrefix}`;
+        }
+      });
+    </script>
+
+    <!-- Script Example of added section -->
+    <script>
+      // async function fetchDisplayInitialConfig() {
+      //   const data = await fetchInitialSectionConfig("display");
+      //
+      //   if (data) {
+      //     document.getElementById("dimming-timeout").value =
+      //       data.dimming_timeout;
+      //     document.getElementById("dimming-percent").value =
+      //       data.dimming_percent;
+      //     document.getElementById("blackout-timeout").value =
+      //       data.blackout_timeout;
+      //     // document.getElementById("dimming-percent-display").textContent =
+      //     //   `${data.dimming_percent}%`;
+      //   }
+      // }
+
+      // // Function to collect Display settings and send them as JSON
+      // function applyDisplaySettings() {
+      //   const dimming_timeout = parseInt(
+      //     document.getElementById("dimming-timeout").value,
+      //   );
+      //   const dimming_percent = parseInt(
+      //     document.getElementById("dimming-percent").value,
+      //   );
+      //   const blackout_timeout = parseInt(
+      //     document.getElementById("blackout-timeout").value,
+      //   );
+      //   const data = { dimming_timeout, dimming_percent, blackout_timeout };
+      //   const applyButton = document.getElementById("display-section-apply");
+      //   sendConfigData("/api/display-config", data, applyButton); // Replace with actual server endpoint
+      // }
+    </script>
+  </body>
+</html>
