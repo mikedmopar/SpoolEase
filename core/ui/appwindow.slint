@@ -133,11 +133,11 @@ export component AppWindow inherits Window {
             x: - current-page_x * FrameworkState.display-width;
             y: - current-page * FrameworkState.display-height;
             animate y {
-                duration: 1000ms;
+                duration: FrameworkState.page-animation-duration;
                 easing: ease-in-out;
             }
             animate x {
-                duration: 1000ms;
+                duration: FrameworkState.page-animation-duration;
                 easing: ease-in-out;
             }
 
@@ -161,7 +161,7 @@ export component AppWindow inherits Window {
                     top := HorizontalLayout {
                         x: topx;
                         animate x {
-                            duration: 1000ms;
+                            duration: FrameworkState.page-animation-duration;
                             easing: ease-in-out;
                         }
                         Storage {
