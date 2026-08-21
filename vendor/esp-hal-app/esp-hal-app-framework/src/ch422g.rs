@@ -1,5 +1,5 @@
-use embedded_hal_async::i2c::I2c;
 use core::convert::Infallible;
+use embedded_hal_async::i2c::I2c;
 
 pub const CH422G_SYSTEM_ADDR: u8 = 0x24;
 pub const CH422G_OUTPUT_ADDR: u8 = 0x38;
@@ -11,8 +11,7 @@ const SYSTEM_OUTPUT_ENABLE: u8 = 0x01;
 // change unrelated outputs, so runtime updates below preserve a shadow state.
 const OUTPUT_TOUCH_RESET_ASSERTED: u8 = 0x2c;
 const OUTPUT_TOUCH_RESET_RELEASED: u8 = 0x2e;
-const OUTPUT_BACKLIGHT_ON: u8 = 0x1e;
-
+const EXIO2_BACKLIGHT: u8 = 1 << 2;
 const EXIO4_SD_CS: u8 = 1 << 4;
 
 pub struct Ch422g<I2C> {
@@ -44,7 +43,11 @@ where
     }
 
     pub async fn enable_backlight_state(&mut self) -> Result<(), I2C::Error> {
-        self.write_output_state(OUTPUT_BACKLIGHT_ON).await
+        self.set_backlight_state(true).await
+    }
+
+    pub async fn disable_backlight_state(&mut self) -> Result<(), I2C::Error> {
+        self.set_backlight_state(false).await
     }
 
     pub async fn select_sd_card_state(&mut self) -> Result<(), I2C::Error> {
@@ -57,6 +60,14 @@ where
 
     pub fn release(self) -> I2C {
         self.i2c
+    }
+
+    pub fn release_with_output_state(self) -> (I2C, u8) {
+        (self.i2c, self.output_state)
+    }
+
+    async fn set_backlight_state(&mut self, on: bool) -> Result<(), I2C::Error> {
+        self.set_output_bit(EXIO2_BACKLIGHT, on).await
     }
 
     async fn set_output_bit(&mut self, mask: u8, high: bool) -> Result<(), I2C::Error> {

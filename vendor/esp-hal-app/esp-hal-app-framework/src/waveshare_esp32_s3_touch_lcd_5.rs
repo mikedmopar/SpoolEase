@@ -6,6 +6,8 @@ use core::{
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::Timer;
+use embedded_hal::i2c::ErrorType;
+use embedded_hal_async::i2c::{I2c, Operation};
 use embedded_hal_bus::spi::ExclusiveDevice;
 use esp_hal::{
     dma::{
@@ -219,6 +221,7 @@ impl UiRenderBackend for WaveshareEsp32S3TouchLcd5RenderBackend {
 pub struct WaveshareEsp32S3TouchLcd5Backlight {
     screen_blanked: Rc<Cell<bool>>,
     screen_refreshes: Rc<Cell<u8>>,
+    physical_backlight_on: Rc<Cell<bool>>,
     window: Rc<McuWindow>,
 }
 
@@ -226,11 +229,13 @@ impl WaveshareEsp32S3TouchLcd5Backlight {
     pub fn new(
         screen_blanked: Rc<Cell<bool>>,
         screen_refreshes: Rc<Cell<u8>>,
+        physical_backlight_on: Rc<Cell<bool>>,
         window: Rc<McuWindow>,
     ) -> Self {
         Self {
             screen_blanked,
             screen_refreshes,
+            physical_backlight_on,
             window,
         }
     }
@@ -241,11 +246,74 @@ impl BacklightDevice for WaveshareEsp32S3TouchLcd5Backlight {
 
     fn set_percent(&mut self, percent: u8) -> Result<(), Self::Error> {
         let should_blank = percent < 100;
+        self.physical_backlight_on.set(!should_blank);
         if self.screen_blanked.replace(should_blank) != should_blank {
             self.screen_refreshes.set(8);
             self.window.request_redraw();
         }
         Ok(())
+    }
+}
+
+pub struct WaveshareTouchI2c<I2C> {
+    i2c: I2C,
+    output_state: u8,
+    physical_backlight_on: Rc<Cell<bool>>,
+    applied_backlight_on: bool,
+}
+
+impl<I2C> WaveshareTouchI2c<I2C>
+where
+    I2C: I2c,
+{
+    pub fn new(i2c: I2C, output_state: u8, physical_backlight_on: Rc<Cell<bool>>) -> Self {
+        let applied_backlight_on = output_state & (1 << 2) != 0;
+        Self {
+            i2c,
+            output_state,
+            physical_backlight_on,
+            applied_backlight_on,
+        }
+    }
+
+    async fn apply_backlight_state(&mut self) -> Result<(), I2C::Error> {
+        let desired_backlight_on = self.physical_backlight_on.get();
+        if desired_backlight_on == self.applied_backlight_on {
+            return Ok(());
+        }
+
+        if desired_backlight_on {
+            self.output_state |= 1 << 2;
+        } else {
+            self.output_state &= !(1 << 2);
+        }
+
+        self.i2c
+            .write(crate::ch422g::CH422G_OUTPUT_ADDR, &[self.output_state])
+            .await?;
+        self.applied_backlight_on = desired_backlight_on;
+        Ok(())
+    }
+}
+
+impl<I2C> ErrorType for WaveshareTouchI2c<I2C>
+where
+    I2C: I2c,
+{
+    type Error = I2C::Error;
+}
+
+impl<I2C> I2c for WaveshareTouchI2c<I2C>
+where
+    I2C: I2c,
+{
+    async fn transaction(
+        &mut self,
+        address: u8,
+        operations: &mut [Operation<'_>],
+    ) -> Result<(), Self::Error> {
+        self.apply_backlight_state().await?;
+        self.i2c.transaction(address, operations).await
     }
 }
 
@@ -595,7 +663,10 @@ where
             .expect("Failed to select Waveshare SD card through CH422G");
         drop(touch_int_strap);
 
-        let touch_i2c = ch422g.release();
+        let (touch_i2c, ch422g_output_state) = ch422g.release_with_output_state();
+        let physical_backlight_on = Rc::new(Cell::new(true));
+        let touch_i2c =
+            WaveshareTouchI2c::new(touch_i2c, ch422g_output_state, physical_backlight_on.clone());
 
         let mut touch_buf = [0u8; 64];
         let mut touch_inner: gt9x::Gt9x<Jc8048w550cGt911, _, _, _, _> =
@@ -621,6 +692,7 @@ where
         let mut backlight = WaveshareEsp32S3TouchLcd5Backlight::new(
             screen_blanked,
             screen_refreshes,
+            physical_backlight_on,
             window.clone(),
         );
 
