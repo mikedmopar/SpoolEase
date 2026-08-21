@@ -1,5 +1,8 @@
 use alloc::{boxed::Box, rc::Rc, string::String};
-use core::{cell::RefCell, slice};
+use core::{
+    cell::{Cell, RefCell},
+    slice,
+};
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::Timer;
@@ -17,6 +20,7 @@ use esp_hal::{
     spi,
     time::Rate,
 };
+use slint::platform::WindowAdapter;
 
 use crate::{
     backlight::BacklightDevice,
@@ -138,7 +142,8 @@ async fn stats_task() {
 pub struct WaveshareEsp32S3TouchLcd5RenderBackend {
     display: RGBDisplayDriver,
     line_buffer: &'static mut AlignedLineBuffer,
-    // window: Rc<McuWindow>,
+    screen_blanked: Rc<Cell<bool>>,
+    screen_refreshes: Rc<Cell<u8>>,
 }
 
 impl UiRenderBackend for WaveshareEsp32S3TouchLcd5RenderBackend {
@@ -179,17 +184,30 @@ impl UiRenderBackend for WaveshareEsp32S3TouchLcd5RenderBackend {
             let pixels: &mut [slint::platform::software_renderer::Rgb565Pixel] =
                 unsafe { slice::from_raw_parts_mut(frame.as_mut_ptr() as *mut _, pixel_count) };
 
-            renderer.render_by_line(FrameLineBuffer {
-                frame_buffer: pixels,
-                line_buffer: &mut self.line_buffer.0,
-                stride: DISP_W,
-            });
+            if self.screen_blanked.get() {
+                pixels.fill(slint::platform::software_renderer::Rgb565Pixel(0));
+            } else {
+                let repaint_buffer_type = renderer.repaint_buffer_type();
+                if self.screen_refreshes.get() > 0 {
+                    renderer.set_repaint_buffer_type(
+                        slint::platform::software_renderer::RepaintBufferType::NewBuffer,
+                    );
+                }
+                renderer.render_by_line(FrameLineBuffer {
+                    frame_buffer: pixels,
+                    line_buffer: &mut self.line_buffer.0,
+                    stride: DISP_W,
+                });
+                renderer.set_repaint_buffer_type(repaint_buffer_type);
+            }
             frame_guard
                 .present()
                 .expect("Failed to present RGB display frame");
-            // if self.double_buffering {
-            //     self.window.request_redraw();
-            // }
+            let refreshes = self.screen_refreshes.get();
+            if refreshes > 0 {
+                self.screen_refreshes.set(refreshes - 1);
+                return false;
+            }
             true
         } else {
             false // can't draw now, so skip drawing and return nothing was drawn, this will make slint_ext release the ui_loop right after to draw again
@@ -198,18 +216,35 @@ impl UiRenderBackend for WaveshareEsp32S3TouchLcd5RenderBackend {
     }
 }
 
-pub struct WaveshareEsp32S3TouchLcd5Backlight;
+pub struct WaveshareEsp32S3TouchLcd5Backlight {
+    screen_blanked: Rc<Cell<bool>>,
+    screen_refreshes: Rc<Cell<u8>>,
+    window: Rc<McuWindow>,
+}
 
 impl WaveshareEsp32S3TouchLcd5Backlight {
-    pub fn new() -> Self {
-        Self
+    pub fn new(
+        screen_blanked: Rc<Cell<bool>>,
+        screen_refreshes: Rc<Cell<u8>>,
+        window: Rc<McuWindow>,
+    ) -> Self {
+        Self {
+            screen_blanked,
+            screen_refreshes,
+            window,
+        }
     }
 }
 
 impl BacklightDevice for WaveshareEsp32S3TouchLcd5Backlight {
     type Error = ();
 
-    fn set_percent(&mut self, _percent: u8) -> Result<(), Self::Error> {
+    fn set_percent(&mut self, percent: u8) -> Result<(), Self::Error> {
+        let should_blank = percent < 100;
+        if self.screen_blanked.replace(should_blank) != should_blank {
+            self.screen_refreshes.set(8);
+            self.window.request_redraw();
+        }
         Ok(())
     }
 }
@@ -575,12 +610,19 @@ where
             AlignedLineBuffer,
             AlignedLineBuffer([slint::platform::software_renderer::Rgb565Pixel(0); DISP_W])
         );
+        let screen_blanked = Rc::new(Cell::new(false));
+        let screen_refreshes = Rc::new(Cell::new(0));
         let render_backend = WaveshareEsp32S3TouchLcd5RenderBackend {
             display,
             line_buffer,
-            // window: window.clone(),
+            screen_blanked: screen_blanked.clone(),
+            screen_refreshes: screen_refreshes.clone(),
         };
-        let mut backlight = WaveshareEsp32S3TouchLcd5Backlight::new();
+        let mut backlight = WaveshareEsp32S3TouchLcd5Backlight::new(
+            screen_blanked,
+            screen_refreshes,
+            window.clone(),
+        );
 
         backlight
             .set_percent(100)
